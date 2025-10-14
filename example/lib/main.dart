@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:dimelo_flutter/dimelo_flutter.dart';
 
 /// Dimelo Flutter Example App
