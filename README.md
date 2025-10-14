@@ -30,7 +30,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  dimelo_flutter: ^0.1.6
+  dimelo_flutter: ^0.1.7
 ```
 
 Then run:
