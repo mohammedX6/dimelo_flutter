@@ -4,15 +4,29 @@ import 'package:flutter/services.dart';
 import 'dimelo_flutter_platform_interface.dart';
 
 /// An implementation of [DimeloFlutterPlatform] that uses method channels.
+///
+/// This class handles communication between Flutter and native platforms
+/// (Android/iOS) for Dimelo messaging functionality.
 class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
   /// The method channel used to interact with the native platform.
+  ///
+  /// This channel is used for all communication between Flutter and
+  /// the native Dimelo SDK implementations.
+  static const MethodChannel _methodChannel = MethodChannel('dimelo_flutter');
+
+  /// Getter for the method channel.
   @visibleForTesting
-  final methodChannel = const MethodChannel('dimelo_flutter');
+  MethodChannel get methodChannel => _methodChannel;
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
-    return version;
+    try {
+      final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
+      return version;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to get platform version: ${e.message}');
+      return null;
+    }
   }
 
   @override
@@ -24,21 +38,34 @@ class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
     String? userId,
     bool? developmentApns,
   }) async {
-    final result = await methodChannel.invokeMethod<bool>('initialize', {
-      'applicationSecret': applicationSecret,
-      'apiKey': apiKey,
-      'apiSecret': apiSecret,
-      'domain': domain,
-      'userId': userId,
-      'developmentApns': developmentApns,
-    });
-    return result ?? false;
+    try {
+      // Prepare parameters for native SDK initialization
+      final result = await methodChannel.invokeMethod<bool>('initialize', <String, dynamic>{
+        'applicationSecret': applicationSecret,
+        'apiKey': apiKey,
+        'apiSecret': apiSecret,
+        'domain': domain,
+        'userId': userId,
+        'developmentApns': developmentApns,
+      });
+      // Return result or false if null
+      return result ?? false;
+    } on PlatformException catch (e) {
+      // Log error and return false on platform exception
+      debugPrint('Failed to initialize Dimelo: ${e.message}');
+      return false;
+    }
   }
 
   @override
   Future<bool> showMessenger() async {
-    final result = await methodChannel.invokeMethod<bool>('showMessenger');
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('showMessenger');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to show messenger: ${e.message}');
+      return false;
+    }
   }
 
   @override
@@ -48,50 +75,88 @@ class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
     String? email,
     String? phone,
   }) async {
-    final result = await methodChannel.invokeMethod<bool>('setUser', {
-      'userId': userId,
-      'name': name,
-      'email': email,
-      'phone': phone,
-    });
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setUser', <String, String?>{
+        'userId': userId,
+        'name': name,
+        'email': email,
+        'phone': phone,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set user: ${e.message}');
+      return false;
+    }
   }
 
   @override
   Future<bool> logout() async {
-    final result = await methodChannel.invokeMethod<bool>('logout');
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('logout');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to logout: ${e.message}');
+      return false;
+    }
   }
 
   @override
   Future<bool> isAvailable() async {
-    final result = await methodChannel.invokeMethod<bool>('isAvailable');
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('isAvailable');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to check availability: ${e.message}');
+      return false;
+    }
   }
 
   @override
   Future<bool> setAuthInfo(Map<String, String> info) async {
-    final result = await methodChannel.invokeMethod<bool>('setAuthInfo', info);
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setAuthInfo', info);
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set auth info: ${e.message}');
+      return false;
+    }
   }
 
   @override
   Future<int> getUnreadCount() async {
-    final result = await methodChannel.invokeMethod<int>('getUnreadCount');
-    return result ?? 0;
+    try {
+      // Request unread message count from native SDK
+      final result = await methodChannel.invokeMethod<int>('getUnreadCount');
+      // Return count or 0 if null/error
+      return result ?? 0;
+    } on PlatformException catch (e) {
+      // Log error and return 0 on platform exception
+      debugPrint('Failed to get unread count: ${e.message}');
+      return 0;
+    }
   }
 
   @override
   Future<bool> setDeviceToken(String token) async {
-    final result = await methodChannel.invokeMethod<bool>('setDeviceToken', {
-      'token': token,
-    });
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setDeviceToken', <String, String>{
+        'token': token,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set device token: ${e.message}');
+      return false;
+    }
   }
 
   @override
   Future<bool> handlePush(Map<String, String> payload) async {
-    final result = await methodChannel.invokeMethod<bool>('handlePush', payload);
-    return result ?? false;
+    try {
+      final result = await methodChannel.invokeMethod<bool>('handlePush', payload);
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to handle push: ${e.message}');
+      return false;
+    }
   }
 }
