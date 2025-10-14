@@ -1,4 +1,4 @@
-package com.example.dimelo_flutter
+package com.flyingapps.dimelo_flutter
 
 import android.app.Activity
 import android.os.Handler

@@ -1,4 +1,4 @@
-package com.example.dimelo_flutter
+package com.flyingapps.dimelo_flutter
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
