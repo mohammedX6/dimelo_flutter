@@ -1,0 +1,27 @@
+name: dimelo_flutter
+description: "A Flutter plugin for Dimelo integration."
+version: 0.1.6
+homepage:
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.29.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.example.dimelo_flutter
+        pluginClass: DimeloFlutterPlugin
+      ios:
+        pluginClass: DimeloFlutterPlugin
