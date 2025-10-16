@@ -1,3 +1,7 @@
+> 🚧 **Early Development Notice**
+> 
+> This plugin is in a **very early stage** of development. Expect breaking changes and limited functionality while the API is being stabilized. Use in production at your own risk.
+
 # Dimelo Flutter Plugin
 
 [![pub package](https://img.shields.io/pub/v/dimelo_flutter.svg)](https://pub.dev/packages/dimelo_flutter)
