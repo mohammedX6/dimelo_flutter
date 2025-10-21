@@ -83,30 +83,56 @@ await dimelo.showMessenger();
 ### Android
 
 1. **Minimum SDK**: API level 24+ (Android 7.0)
-2. **Add to `android/build.gradle`**:
+
+2. **Add repositories to `android/build.gradle` (project level)**:
 
 ```gradle
 allprojects {
     repositories {
-        // Add Dimelo repository
-        maven {
-            url "https://maven.dimelo.com/releases"
-        }
+        google()
+        mavenCentral()
+        // Add Dimelo repositories
+        maven { url 'https://raw.github.com/ringcentral/engage-digital-messaging-android/master' }
+        maven { url 'https://raw.github.com/ringcentral/engage-digital-messaging-android-location/master' }
+        maven { url 'https://raw.github.com/dimelo/Dimelo-Android/master' }
     }
-}
-
-dependencies {
-    // Add Dimelo Android SDK
-    implementation 'com.dimelo:android-sdk:VERSION'
 }
 ```
 
-3. **Add permissions to `android/app/src/main/AndroidManifest.xml`**:
+3. **Add dependencies to `android/app/build.gradle` (app level)**:
+
+```gradle
+dependencies {
+    // Dimelo Android SDKs
+    implementation 'com.dimelo.dimelosdk:dimelosdk:3.3.9'
+    implementation 'com.ringcentral.edmessagingmapssdk:edmessagingmapssdk:1.0.1'
+    // Required by Dimelo Chat UI
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+}
+```
+
+4. **Add permissions to `android/app/src/main/AndroidManifest.xml`**:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 ```
+
+5. **Important**: Ensure your app's `android/app/build.gradle` has compatible versions:
+
+```gradle
+android {
+    compileSdk 34
+    minSdk 24
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+```
+
+**Note**: This plugin requires the Dimelo native SDKs to be properly configured in your host app. The plugin provides Flutter bindings but the actual messaging functionality depends on the native SDKs being correctly set up.
 
 ### iOS
 

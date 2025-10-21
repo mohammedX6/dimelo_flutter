@@ -8,13 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.7] - 2025-10-14
 
 ### Fixed
-- Updated package naming
+- Updated package naming from com.example to com.flyingapps.dimelo_flutter
 - Simplified example app with cleaner code structure
+- Fixed Gradle configuration for proper Android build support
 - Improved error handling with debug mode logging
 
 ### Changed
 - Example app now uses print statements instead of ScaffoldMessenger
+- Updated Android package structure for better organization
 - Enhanced example app with conditional debug logging
+- Updated README with comprehensive Android setup instructions
+- Added proper Maven repository configuration for Dimelo SDKs
+- Added app compatibility requirements and version specifications
 
 ## [0.1.6] - 2025-10-14
 

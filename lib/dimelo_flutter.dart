@@ -125,4 +125,61 @@ class DimeloFlutter {
   ///
   /// Returns `true` if the payload was consumed by Dimelo, `false` otherwise.
   Future<bool> handlePush(Map<String, String> payload) => DimeloFlutterPlatform.instance.handlePush(payload);
+
+  /// Set the app bar title dynamically.
+  ///
+  /// This method allows you to change the app bar title at runtime.
+  ///
+  /// Parameters:
+  /// - [title] - The new title for the app bar
+  ///
+  /// Returns `true` if the title was set successfully, `false` otherwise.
+  Future<bool> setAppBarTitle(String title) => DimeloFlutterPlatform.instance.setAppBarTitle(title);
+
+  /// Set the app bar color dynamically.
+  ///
+  /// This method allows you to change the app bar background color at runtime.
+  ///
+  /// Parameters:
+  /// - [color] - The new color for the app bar (hex format like "#FF0000")
+  ///
+  /// Returns `true` if the color was set successfully, `false` otherwise.
+  Future<bool> setAppBarColor(String color) => DimeloFlutterPlatform.instance.setAppBarColor(color);
+
+  /// Set the app bar visibility dynamically.
+  ///
+  /// This method allows you to show or hide the app bar at runtime.
+  ///
+  /// Parameters:
+  /// - [visible] - Whether the app bar should be visible
+  ///
+  /// Returns `true` if the visibility was set successfully, `false` otherwise.
+  Future<bool> setAppBarVisibility({required bool visible}) => DimeloFlutterPlatform.instance.setAppBarVisibility(visible: visible);
+
+  /// Set the back button visibility dynamically.
+  ///
+  /// This method allows you to show or hide the back button in the app bar.
+  ///
+  /// Parameters:
+  /// - [visible] - Whether the back button should be visible
+  ///
+  /// Returns `true` if the back button visibility was set successfully, `false` otherwise.
+  Future<bool> setBackButtonVisibility({required bool visible}) => DimeloFlutterPlatform.instance.setBackButtonVisibility(visible: visible);
+
+  /// Get the current app bar configuration.
+  ///
+  /// This method returns the current app bar settings including title, color, and visibility.
+  ///
+  /// Returns a map containing the current app bar configuration.
+  Future<Map<String, dynamic>> getAppBarConfig() => DimeloFlutterPlatform.instance.getAppBarConfig();
+
+  /// Set the presentation style for iOS (full screen vs bottom sheet).
+  ///
+  /// This method controls how the chat interface is presented on iOS.
+  ///
+  /// Parameters:
+  /// - [fullScreen] - Whether to present as full screen (true) or bottom sheet (false)
+  ///
+  /// Returns `true` if the presentation style was set successfully, `false` otherwise.
+  Future<bool> setFullScreenPresentation({required bool fullScreen}) => DimeloFlutterPlatform.instance.setFullScreenPresentation(fullScreen: fullScreen);
 }

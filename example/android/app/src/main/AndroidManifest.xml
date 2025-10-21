@@ -30,6 +30,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        
+        <!-- Custom Chat Activity for Dimelo with proper back button handling -->
+        <activity
+            android:name="com.flyingapps.dimelo_flutter.CustomChatActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:parentActivityName=".MainActivity" />
+            
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

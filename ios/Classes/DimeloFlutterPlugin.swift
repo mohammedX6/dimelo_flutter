@@ -13,6 +13,13 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
   private var userEmail: String?
   private var userPhone: String?
   private var authInfo: [String: Any] = [:]
+  
+  // App bar customization properties
+  private var appBarTitle: String = "Dimelo Chat"
+  private var appBarColor: UIColor = UIColor.systemBlue
+  private var showBackButton: Bool = true
+  private var appBarVisible: Bool = true
+  private var fullScreenPresentation: Bool = true
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "dimelo_flutter", binaryMessenger: registrar.messenger())
@@ -195,8 +202,163 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
       } else {
         result(false)
       }
+    case "setAppBarTitle":
+      if let args = call.arguments as? [String: Any], let title = args["title"] as? String {
+        self.appBarTitle = title
+        self.updateAppBar()
+        result(true)
+      } else {
+        result(false)
+      }
+    case "setAppBarColor":
+      if let args = call.arguments as? [String: Any], let colorHex = args["color"] as? String {
+        if let color = self.colorFromHex(colorHex) {
+          self.appBarColor = color
+          self.updateAppBar()
+          result(true)
+        } else {
+          result(false)
+        }
+      } else {
+        result(false)
+      }
+    case "setAppBarVisibility":
+      if let args = call.arguments as? [String: Any], let visible = args["visible"] as? Bool {
+        self.appBarVisible = visible
+        self.updateAppBar()
+        result(true)
+      } else {
+        result(false)
+      }
+    case "setBackButtonVisibility":
+      if let args = call.arguments as? [String: Any], let visible = args["visible"] as? Bool {
+        self.showBackButton = visible
+        self.updateAppBar()
+        result(true)
+      } else {
+        result(false)
+      }
+    case "getAppBarConfig":
+      let config: [String: Any] = [
+        "title": self.appBarTitle,
+        "color": self.hexFromColor(self.appBarColor),
+        "visible": self.appBarVisible,
+        "showBackButton": self.showBackButton,
+        "fullScreenPresentation": self.fullScreenPresentation
+      ]
+      result(config)
+    case "setFullScreenPresentation":
+      if let args = call.arguments as? [String: Any], let fullScreen = args["fullScreen"] as? Bool {
+        self.fullScreenPresentation = fullScreen
+        result(true)
+      } else {
+        result(false)
+      }
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+  
+  // MARK: - App Bar Helper Methods
+  
+  /// Convert hex color string to UIColor
+  private func colorFromHex(_ hex: String) -> UIColor? {
+    var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+    hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+    
+    var rgb: UInt64 = 0
+    
+    var r: CGFloat = 0.0
+    var g: CGFloat = 0.0
+    var b: CGFloat = 0.0
+    var a: CGFloat = 1.0
+    
+    let length = hexSanitized.count
+    
+    guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+    
+    if length == 6 {
+      r = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+      g = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+      b = CGFloat(rgb & 0x0000FF) / 255.0
+    } else if length == 8 {
+      r = CGFloat((rgb & 0xFF000000) >> 24) / 255.0
+      g = CGFloat((rgb & 0x00FF0000) >> 16) / 255.0
+      b = CGFloat((rgb & 0x0000FF00) >> 8) / 255.0
+      a = CGFloat(rgb & 0x000000FF) / 255.0
+    } else {
+      return nil
+    }
+    
+    return UIColor(red: r, green: g, blue: b, alpha: a)
+  }
+  
+  /// Convert UIColor to hex string
+  private func hexFromColor(_ color: UIColor) -> String {
+    var r: CGFloat = 0
+    var g: CGFloat = 0
+    var b: CGFloat = 0
+    var a: CGFloat = 0
+    
+    color.getRed(&r, green: &g, blue: &b, alpha: &a)
+    
+    let rgb: Int = (Int)(r*255)<<16 | (Int)(g*255)<<8 | (Int)(b*255)<<0
+    
+    return String(format: "#%06x", rgb)
+  }
+  
+  /// Configure navigation controller with app bar settings
+  private func configureNavigationController(_ navController: UINavigationController) {
+    let appearance = UINavigationBarAppearance()
+    appearance.configureWithOpaqueBackground()
+    appearance.backgroundColor = self.appBarColor
+    appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+    
+    navController.navigationBar.standardAppearance = appearance
+    navController.navigationBar.scrollEdgeAppearance = appearance
+    navController.navigationBar.compactAppearance = appearance
+    
+    // Set navigation bar visibility
+    navController.setNavigationBarHidden(!self.appBarVisible, animated: false)
+  }
+
+  /// Update the app bar configuration for the current view controller
+  private func updateAppBar() {
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      
+      if let topVC = self.topViewController() {
+        // Update navigation bar appearance
+        if let navController = topVC.navigationController {
+          let appearance = UINavigationBarAppearance()
+          appearance.configureWithOpaqueBackground()
+          appearance.backgroundColor = self.appBarColor
+          appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+          
+          navController.navigationBar.standardAppearance = appearance
+          navController.navigationBar.scrollEdgeAppearance = appearance
+          navController.navigationBar.compactAppearance = appearance
+          
+          // Update title
+          topVC.navigationItem.title = self.appBarTitle
+          
+          // Update back button
+          if self.showBackButton {
+            let backButton = UIBarButtonItem(
+              image: UIImage(systemName: "chevron.left"),
+              style: .plain,
+              target: self,
+              action: #selector(self.dismissChat)
+            )
+            topVC.navigationItem.leftBarButtonItem = backButton
+          } else {
+            topVC.navigationItem.leftBarButtonItem = nil
+          }
+          
+          // Update navigation bar visibility
+          navController.setNavigationBarHidden(!self.appBarVisible, animated: true)
+        }
+      }
     }
   }
 }

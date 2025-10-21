@@ -4,6 +4,11 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import android.content.Context
+import android.graphics.Color
+import android.view.View
+import android.widget.Toolbar
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar as AppCompatToolbar
 import com.dimelo.dimelosdk.main.Dimelo
 import org.json.JSONObject
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -13,6 +18,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import android.view.MenuItem
 
 /** DimeloFlutterPlugin */
 class DimeloFlutterPlugin :
@@ -37,6 +43,12 @@ class DimeloFlutterPlugin :
     private var userEmail: String? = null
     private var userPhone: String? = null
     private var authInfo: HashMap<String, Any> = HashMap()
+    
+    // App bar customization properties
+    private var appBarTitle: String = "Dimelo Chat"
+    private var appBarColor: Int = Color.BLUE
+    private var showBackButton: Boolean = true
+    private var appBarVisible: Boolean = true
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "dimelo_flutter")
@@ -87,13 +99,19 @@ class DimeloFlutterPlugin :
                     result.success(false)
                     return
                 }
-                // Navigate to new screen with Dimelo chat
+
                 Handler(Looper.getMainLooper()).post {
-                    val dimelo = Dimelo.getInstance()
                     activity?.let { act ->
-                        val intent = android.content.Intent(act, com.dimelo.dimelosdk.main.ChatActivity::class.java)
-                        // Add flags to ensure proper back navigation
-                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        // Use our custom chat activity that handles back button properly
+                        val intent = android.content.Intent(act, CustomChatActivity::class.java)
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        
+                        // Pass app bar configuration to the chat activity
+                        intent.putExtra("appBarTitle", appBarTitle)
+                        intent.putExtra("appBarColor", appBarColor)
+                        intent.putExtra("appBarVisible", appBarVisible)
+                        intent.putExtra("showBackButton", showBackButton)
+                        
                         act.startActivity(intent)
                         result.success(true)
                     } ?: run {
@@ -101,6 +119,7 @@ class DimeloFlutterPlugin :
                     }
                 }
             }
+
             "setUser" -> {
                 userId = call.argument("userId")
                 userName = call.argument("name")
@@ -186,6 +205,52 @@ class DimeloFlutterPlugin :
                     result.success(false)
                 }
             }
+            "setAppBarTitle" -> {
+                val title: String? = call.argument("title")
+                title?.let { 
+                    appBarTitle = it
+                    updateAppBar()
+                }
+                result.success(true)
+            }
+            "setAppBarColor" -> {
+                val color: String? = call.argument("color")
+                color?.let { 
+                    try {
+                        appBarColor = Color.parseColor(it)
+                        updateAppBar()
+                    } catch (e: IllegalArgumentException) {
+                        result.success(false)
+                        return
+                    }
+                }
+                result.success(true)
+            }
+            "setAppBarVisibility" -> {
+                val visible: Boolean? = call.argument("visible")
+                visible?.let { 
+                    appBarVisible = it
+                    updateAppBar()
+                }
+                result.success(true)
+            }
+            "setBackButtonVisibility" -> {
+                val visible: Boolean? = call.argument("visible")
+                visible?.let { 
+                    showBackButton = it
+                    updateAppBar()
+                }
+                result.success(true)
+            }
+            "getAppBarConfig" -> {
+                val config = mapOf(
+                    "title" to appBarTitle,
+                    "color" to String.format("#%06X", 0xFFFFFF and appBarColor),
+                    "visible" to appBarVisible,
+                    "showBackButton" to showBackButton
+                )
+                result.success(config)
+            }
             else -> result.notImplemented()
         }
     }
@@ -209,5 +274,86 @@ class DimeloFlutterPlugin :
 
     override fun onDetachedFromActivity() {
         activity = null
+    }
+    
+    /**
+     * Setup back button handling for the activity
+     * This ensures the back button works properly in the chat activity
+     */
+    private fun setupBackButtonHandling(activity: Activity) {
+        if (activity is AppCompatActivity) {
+            // Set up the action bar with proper back button handling
+            activity.supportActionBar?.let { actionBar ->
+                actionBar.setDisplayHomeAsUpEnabled(showBackButton)
+                actionBar.setDisplayShowHomeEnabled(showBackButton)
+                
+                if (showBackButton) {
+                    // Set a proper back arrow icon
+                    actionBar.setHomeAsUpIndicator(android.R.drawable.ic_menu_revert)
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle back button press
+     * This method should be called from the activity's onOptionsItemSelected
+     */
+    fun handleBackButtonPress(activity: Activity): Boolean {
+        if (showBackButton) {
+            // Finish the current activity to go back
+            activity.finish()
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Update the app bar configuration for the current activity
+     * This method applies the current app bar settings to the activity
+     */
+    private fun updateAppBar() {
+        activity?.let { act ->
+            Handler(Looper.getMainLooper()).post {
+                if (act is AppCompatActivity) {
+                    // Update the support action bar
+                    act.supportActionBar?.let { actionBar ->
+                        actionBar.title = appBarTitle
+                        actionBar.setBackgroundDrawable(
+                            android.graphics.drawable.ColorDrawable(appBarColor)
+                        )
+                        actionBar.setDisplayHomeAsUpEnabled(showBackButton)
+                        actionBar.setDisplayShowHomeEnabled(showBackButton)
+                        
+                        // Set up back button click listener
+                        if (showBackButton) {
+                            actionBar.setHomeAsUpIndicator(android.R.drawable.ic_menu_revert)
+                        }
+                        
+                        if (appBarVisible) {
+                            actionBar.show()
+                        } else {
+                            actionBar.hide()
+                        }
+                    }
+                } else {
+                    // For regular Activity, update the action bar
+                    act.actionBar?.let { actionBar ->
+                        actionBar.title = appBarTitle
+                        actionBar.setBackgroundDrawable(
+                            android.graphics.drawable.ColorDrawable(appBarColor)
+                        )
+                        actionBar.setDisplayHomeAsUpEnabled(showBackButton)
+                        actionBar.setDisplayShowHomeEnabled(showBackButton)
+                        
+                        if (appBarVisible) {
+                            actionBar.show()
+                        } else {
+                            actionBar.hide()
+                        }
+                    }
+                }
+            }
+        }
     }
 }

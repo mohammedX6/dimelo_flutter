@@ -41,63 +41,108 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Status Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Status: $_statusMessage',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Unread Messages: $_unreadCount'),
-                      Text('Initialized: ${_isInitialized ? "Yes" : "No"}'),
-                    ],
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Status Card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Status: $_statusMessage',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Unread Messages: $_unreadCount'),
+                        Text('Initialized: ${_isInitialized ? "Yes" : "No"}'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // Action Buttons
-              ElevatedButton(
-                onPressed: _isInitialized ? null : _initializeDimelo,
-                child: const Text('Initialize Dimelo'),
-              ),
-              const SizedBox(height: 12),
-
-              ElevatedButton(
-                onPressed: _isInitialized ? _setUser : null,
-                child: const Text('Set User Info'),
-              ),
-              const SizedBox(height: 12),
-
-              ElevatedButton(
-                onPressed: _isInitialized ? _showMessenger : null,
-                child: const Text('Show Messenger'),
-              ),
-              const SizedBox(height: 12),
-
-              ElevatedButton(
-                onPressed: _isInitialized ? _refreshUnreadCount : null,
-                child: const Text('Refresh Unread Count'),
-              ),
-              const SizedBox(height: 12),
-
-              ElevatedButton(
-                onPressed: _isInitialized ? _logout : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 20),
+            
+                // Action Buttons
+                ElevatedButton(
+                  onPressed: _isInitialized ? null : _initializeDimelo,
+                  child: const Text('Initialize Dimelo'),
                 ),
-                child: const Text('Logout'),
-              ),
-            ],
+                const SizedBox(height: 12),
+            
+                ElevatedButton(
+                  onPressed: _isInitialized ? _setUser : null,
+                  child: const Text('Set User Info'),
+                ),
+                const SizedBox(height: 12),
+            
+                ElevatedButton(
+                  onPressed: _isInitialized ? _showMessenger : null,
+                  child: const Text('Show Messenger'),
+                ),
+                const SizedBox(height: 12),
+            
+                ElevatedButton(
+                  onPressed: _isInitialized ? _refreshUnreadCount : null,
+                  child: const Text('Refresh Unread Count'),
+                ),
+                const SizedBox(height: 12),
+            
+                ElevatedButton(
+                  onPressed: _isInitialized ? _logout : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Logout'),
+                ),
+                const SizedBox(height: 20),
+                
+                // App Bar Customization Section
+                const Text(
+                  'App Bar Customization',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                
+                ElevatedButton(
+                  onPressed: _isInitialized ? _changeAppBarTitle : null,
+                  child: const Text('Change App Bar Title'),
+                ),
+                const SizedBox(height: 8),
+                
+                ElevatedButton(
+                  onPressed: _isInitialized ? _changeAppBarColor : null,
+                  child: const Text('Change App Bar Color'),
+                ),
+                const SizedBox(height: 8),
+                
+                ElevatedButton(
+                  onPressed: _isInitialized ? _toggleAppBarVisibility : null,
+                  child: const Text('Toggle App Bar Visibility'),
+                ),
+                const SizedBox(height: 8),
+                
+                ElevatedButton(
+                  onPressed: _isInitialized ? _toggleBackButton : null,
+                  child: const Text('Toggle Back Button'),
+                ),
+                const SizedBox(height: 8),
+                
+                ElevatedButton(
+                  onPressed: _isInitialized ? _toggleFullScreenPresentation : null,
+                  child: const Text('Toggle Full Screen (iOS)'),
+                ),
+                const SizedBox(height: 8),
+                
+                ElevatedButton(
+                  onPressed: _isInitialized ? _testBackButton : null,
+                  child: const Text('Test Back Button (Android)'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -227,6 +272,105 @@ class _MyAppState extends State<MyApp> {
     } catch (e) {
       if (kDebugMode) {
         print('Error: $e');
+      }
+    }
+  }
+
+  /// Change app bar title dynamically
+  Future<void> _changeAppBarTitle() async {
+    try {
+      final success = await _dimeloFlutterPlugin.setAppBarTitle('Dynamic Title ${DateTime.now().millisecondsSinceEpoch % 1000}');
+      if (kDebugMode) {
+        print(success ? 'App bar title changed!' : 'Failed to change app bar title');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error changing app bar title: $e');
+      }
+    }
+  }
+
+  /// Change app bar color dynamically
+  Future<void> _changeAppBarColor() async {
+    try {
+      final colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+      final randomColor = colors[DateTime.now().millisecondsSinceEpoch % colors.length];
+      final success = await _dimeloFlutterPlugin.setAppBarColor(randomColor);
+      if (kDebugMode) {
+        print(success ? 'App bar color changed to $randomColor!' : 'Failed to change app bar color');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error changing app bar color: $e');
+      }
+    }
+  }
+
+  /// Toggle app bar visibility
+  Future<void> _toggleAppBarVisibility() async {
+    try {
+      // Get current config to toggle visibility
+      final config = await _dimeloFlutterPlugin.getAppBarConfig();
+      final currentVisibility = config['visible'] as bool? ?? true;
+      final success = await _dimeloFlutterPlugin.setAppBarVisibility(visible: !currentVisibility);
+      if (kDebugMode) {
+        print(success ? 'App bar visibility toggled!' : 'Failed to toggle app bar visibility');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling app bar visibility: $e');
+      }
+    }
+  }
+
+  /// Toggle back button visibility
+  Future<void> _toggleBackButton() async {
+    try {
+      // Get current config to toggle back button
+      final config = await _dimeloFlutterPlugin.getAppBarConfig();
+      final currentBackButton = config['showBackButton'] as bool? ?? true;
+      final success = await _dimeloFlutterPlugin.setBackButtonVisibility(visible: !currentBackButton);
+      if (kDebugMode) {
+        print(success ? 'Back button visibility toggled!' : 'Failed to toggle back button visibility');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling back button visibility: $e');
+      }
+    }
+  }
+
+  /// Toggle full screen presentation (iOS only)
+  Future<void> _toggleFullScreenPresentation() async {
+    try {
+      // Get current config to toggle full screen presentation
+      final config = await _dimeloFlutterPlugin.getAppBarConfig();
+      final currentFullScreen = config['fullScreenPresentation'] as bool? ?? true;
+      final success = await _dimeloFlutterPlugin.setFullScreenPresentation(fullScreen: !currentFullScreen);
+      if (kDebugMode) {
+        print(success ? 'Full screen presentation toggled!' : 'Failed to toggle full screen presentation');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling full screen presentation: $e');
+      }
+    }
+  }
+
+  /// Test back button functionality (Android)
+  Future<void> _testBackButton() async {
+    try {
+      // Ensure back button is enabled
+      await _dimeloFlutterPlugin.setBackButtonVisibility(visible: true);
+      
+      // Show messenger to test back button
+      final success = await _dimeloFlutterPlugin.showMessenger();
+      if (kDebugMode) {
+        print(success ? 'Messenger opened - test the back button!' : 'Failed to open messenger');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error testing back button: $e');
       }
     }
   }

@@ -159,4 +159,80 @@ class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
       return false;
     }
   }
+
+  @override
+  Future<bool> setAppBarTitle(String title) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setAppBarTitle', <String, String>{
+        'title': title,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set app bar title: ${e.message}');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> setAppBarColor(String color) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setAppBarColor', <String, String>{
+        'color': color,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set app bar color: ${e.message}');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> setAppBarVisibility({required bool visible}) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setAppBarVisibility', <String, bool>{
+        'visible': visible,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set app bar visibility: ${e.message}');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> setBackButtonVisibility({required bool visible}) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setBackButtonVisibility', <String, bool>{
+        'visible': visible,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set back button visibility: ${e.message}');
+      return false;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAppBarConfig() async {
+    try {
+      final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('getAppBarConfig');
+      return Map<String, dynamic>.from(result ?? {});
+    } on PlatformException catch (e) {
+      debugPrint('Failed to get app bar config: ${e.message}');
+      return {};
+    }
+  }
+
+  @override
+  Future<bool> setFullScreenPresentation({required bool fullScreen}) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setFullScreenPresentation', <String, bool>{
+        'fullScreen': fullScreen,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set full screen presentation: ${e.message}');
+      return false;
+    }
+  }
 }

@@ -156,4 +156,73 @@ abstract class DimeloFlutterPlatform extends PlatformInterface {
   Future<bool> handlePush(Map<String, String> payload) {
     throw UnimplementedError('handlePush() has not been implemented.');
   }
+
+  /// Set the app bar title dynamically.
+  ///
+  /// This method allows you to change the app bar title at runtime.
+  ///
+  /// Parameters:
+  /// - [title] - The new title for the app bar
+  ///
+  /// Returns `true` if the title was set successfully, `false` otherwise.
+  Future<bool> setAppBarTitle(String title) {
+    throw UnimplementedError('setAppBarTitle() has not been implemented.');
+  }
+
+  /// Set the app bar color dynamically.
+  ///
+  /// This method allows you to change the app bar background color at runtime.
+  ///
+  /// Parameters:
+  /// - [color] - The new color for the app bar (hex format like "#FF0000")
+  ///
+  /// Returns `true` if the color was set successfully, `false` otherwise.
+  Future<bool> setAppBarColor(String color) {
+    throw UnimplementedError('setAppBarColor() has not been implemented.');
+  }
+
+  /// Set the app bar visibility dynamically.
+  ///
+  /// This method allows you to show or hide the app bar at runtime.
+  ///
+  /// Parameters:
+  /// - [visible] - Whether the app bar should be visible
+  ///
+  /// Returns `true` if the visibility was set successfully, `false` otherwise.
+  Future<bool> setAppBarVisibility({required bool visible}) {
+    throw UnimplementedError('setAppBarVisibility() has not been implemented.');
+  }
+
+  /// Set the back button visibility dynamically.
+  ///
+  /// This method allows you to show or hide the back button in the app bar.
+  ///
+  /// Parameters:
+  /// - [visible] - Whether the back button should be visible
+  ///
+  /// Returns `true` if the back button visibility was set successfully, `false` otherwise.
+  Future<bool> setBackButtonVisibility({required bool visible}) {
+    throw UnimplementedError('setBackButtonVisibility() has not been implemented.');
+  }
+
+  /// Get the current app bar configuration.
+  ///
+  /// This method returns the current app bar settings including title, color, and visibility.
+  ///
+  /// Returns a map containing the current app bar configuration.
+  Future<Map<String, dynamic>> getAppBarConfig() {
+    throw UnimplementedError('getAppBarConfig() has not been implemented.');
+  }
+
+  /// Set the presentation style for iOS (full screen vs bottom sheet).
+  ///
+  /// This method controls how the chat interface is presented on iOS.
+  ///
+  /// Parameters:
+  /// - [fullScreen] - Whether to present as full screen (true) or bottom sheet (false)
+  ///
+  /// Returns `true` if the presentation style was set successfully, `false` otherwise.
+  Future<bool> setFullScreenPresentation({required bool fullScreen}) {
+    throw UnimplementedError('setFullScreenPresentation() has not been implemented.');
+  }
 }
