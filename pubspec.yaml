@@ -1,6 +1,6 @@
 name: dimelo_flutter
 description: "A Flutter plugin for Dimelo integration."
-version: 0.1.7
+version: 0.1.8
 homepage: https://github.com/mohammedX6/dimelo_flutter
 
 environment:
