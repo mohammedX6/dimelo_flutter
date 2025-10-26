@@ -146,6 +146,26 @@ class DimeloFlutter {
   /// Returns `true` if the color was set successfully, `false` otherwise.
   Future<bool> setAppBarColor(String color) => DimeloFlutterPlatform.instance.setAppBarColor(color);
 
+  /// Set the app bar title color dynamically.
+  ///
+  /// This method allows you to change the app bar title text color at runtime.
+  ///
+  /// Parameters:
+  /// - [color] - The new color for the app bar title (hex format like "#000000")
+  ///
+  /// Returns `true` if the title color was set successfully, `false` otherwise.
+  Future<bool> setAppBarTitleColor(String color) => DimeloFlutterPlatform.instance.setAppBarTitleColor(color);
+
+  /// Set the back arrow color dynamically.
+  ///
+  /// This method allows you to change the back arrow color at runtime.
+  ///
+  /// Parameters:
+  /// - [color] - The new color for the back arrow (hex format like "#000000")
+  ///
+  /// Returns `true` if the back arrow color was set successfully, `false` otherwise.
+  Future<bool> setBackArrowColor(String color) => DimeloFlutterPlatform.instance.setBackArrowColor(color);
+
   /// Set the app bar visibility dynamically.
   ///
   /// This method allows you to show or hide the app bar at runtime.

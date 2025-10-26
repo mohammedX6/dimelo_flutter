@@ -187,6 +187,32 @@ class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
   }
 
   @override
+  Future<bool> setAppBarTitleColor(String color) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setAppBarTitleColor', <String, String>{
+        'color': color,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set app bar title color: ${e.message}');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> setBackArrowColor(String color) async {
+    try {
+      final result = await methodChannel.invokeMethod<bool>('setBackArrowColor', <String, String>{
+        'color': color,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Failed to set back arrow color: ${e.message}');
+      return false;
+    }
+  }
+
+  @override
   Future<bool> setAppBarVisibility({required bool visible}) async {
     try {
       final result = await methodChannel.invokeMethod<bool>('setAppBarVisibility', <String, bool>{

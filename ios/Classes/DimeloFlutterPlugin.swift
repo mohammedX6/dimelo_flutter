@@ -17,9 +17,14 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
   // App bar customization properties
   private var appBarTitle: String = "Dimelo Chat"
   private var appBarColor: UIColor = UIColor.systemBlue
+  private var appBarTitleColor: UIColor = UIColor.black
+  private var backArrowColor: UIColor = UIColor.black
   private var showBackButton: Bool = true
   private var appBarVisible: Bool = true
   private var fullScreenPresentation: Bool = true
+  
+  // Reference to the chat view controller for updating title
+  private weak var currentChatViewController: UIViewController?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "dimelo_flutter", binaryMessenger: registrar.messenger())
@@ -66,14 +71,37 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
 
   @objc func dismissChat() {
     DispatchQueue.main.async { [weak self] in
-      if let top = self?.topViewController() {
+      // Dismiss the chat view controller
+      if let chatVC = self?.currentChatViewController {
+        chatVC.dismiss(animated: true, completion: nil)
+      } else if let top = self?.topViewController() {
         if top.navigationController != nil {
           top.navigationController?.popViewController(animated: true)
         } else {
           top.dismiss(animated: true, completion: nil)
         }
       }
+      // Clear the reference to the chat view controller
+      self?.currentChatViewController = nil
     }
+  }
+  
+  // Helper function to create a clean back button without background
+  private func createBackButton() -> UIBarButtonItem {
+    let backButton = UIBarButtonItem(
+      image: UIImage(systemName: "chevron.left"),
+      style: .plain,
+      target: self,
+      action: #selector(self.dismissChat)
+    )
+    backButton.tintColor = self.backArrowColor
+    
+    // Remove any background
+    if #available(iOS 14.0, *) {
+      backButton.backgroundImage(for: .normal, barMetrics: .default)
+    }
+    
+    return backButton
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -121,9 +149,62 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
       DispatchQueue.main.async {
         guard let dimelo = Dimelo.sharedInstance() else { result(false); return }
         if let chatVC = dimelo.chatViewController() {
+          // Store reference to the chat view controller
+          self.currentChatViewController = chatVC
+          
+          // Set the title on the chat view controller
+          chatVC.title = self.appBarTitle
+          chatVC.navigationItem.title = self.appBarTitle
+          
+          // Add back button to navigation bar
+          if self.showBackButton {
+            chatVC.navigationItem.leftBarButtonItem = self.createBackButton()
+          }
+          
+          // Set modal presentation style to full screen (not bottom sheet)
+          chatVC.modalPresentationStyle = .fullScreen
+          
+          // Configure navigation bar appearance if available
+          if let navController = chatVC.navigationController {
+            self.configureNavigationController(navController)
+          }
+          
           if let top = self.topViewController() {
-            // Simply present the chat view controller modally
-            top.present(chatVC, animated: true) { result(true) }
+            // Present the chat view controller full screen
+            top.present(chatVC, animated: true) {
+              // Set the title and back button again after presentation to ensure they stick
+              chatVC.title = self.appBarTitle
+              chatVC.navigationItem.title = self.appBarTitle
+              
+              if self.showBackButton && chatVC.navigationItem.leftBarButtonItem == nil {
+                chatVC.navigationItem.leftBarButtonItem = self.createBackButton()
+              }
+              
+              // Set title and back button with delays to ensure they persist
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                chatVC.title = self.appBarTitle
+                chatVC.navigationItem.title = self.appBarTitle
+                if self.showBackButton && chatVC.navigationItem.leftBarButtonItem == nil {
+                  chatVC.navigationItem.leftBarButtonItem = self.createBackButton()
+                }
+              }
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                chatVC.title = self.appBarTitle
+                chatVC.navigationItem.title = self.appBarTitle
+                if self.showBackButton && chatVC.navigationItem.leftBarButtonItem == nil {
+                  chatVC.navigationItem.leftBarButtonItem = self.createBackButton()
+                }
+              }
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                chatVC.title = self.appBarTitle
+                chatVC.navigationItem.title = self.appBarTitle
+                if self.showBackButton && chatVC.navigationItem.leftBarButtonItem == nil {
+                  chatVC.navigationItem.leftBarButtonItem = self.createBackButton()
+                }
+              }
+              
+              result(true)
+            }
           } else {
             result(false)
           }
@@ -205,6 +286,15 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
     case "setAppBarTitle":
       if let args = call.arguments as? [String: Any], let title = args["title"] as? String {
         self.appBarTitle = title
+        
+        // Update the current chat view controller if it exists
+        if let chatVC = self.currentChatViewController {
+          DispatchQueue.main.async {
+            chatVC.title = title
+            chatVC.navigationItem.title = title
+          }
+        }
+        
         self.updateAppBar()
         result(true)
       } else {
@@ -214,6 +304,40 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
       if let args = call.arguments as? [String: Any], let colorHex = args["color"] as? String {
         if let color = self.colorFromHex(colorHex) {
           self.appBarColor = color
+          self.updateAppBar()
+          result(true)
+        } else {
+          result(false)
+        }
+      } else {
+        result(false)
+      }
+    case "setAppBarTitleColor":
+      if let args = call.arguments as? [String: Any], let colorHex = args["color"] as? String {
+        if let color = self.colorFromHex(colorHex) {
+          self.appBarTitleColor = color
+          self.updateAppBar()
+          result(true)
+        } else {
+          result(false)
+        }
+      } else {
+        result(false)
+      }
+    case "setBackArrowColor":
+      if let args = call.arguments as? [String: Any], let colorHex = args["color"] as? String {
+        if let color = self.colorFromHex(colorHex) {
+          self.backArrowColor = color
+          
+          // Update the back button color on the current chat if visible
+          if let chatVC = self.currentChatViewController {
+            DispatchQueue.main.async {
+              if let leftButton = chatVC.navigationItem.leftBarButtonItem {
+                leftButton.tintColor = color
+              }
+            }
+          }
+          
           self.updateAppBar()
           result(true)
         } else {
@@ -312,11 +436,15 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
     let appearance = UINavigationBarAppearance()
     appearance.configureWithOpaqueBackground()
     appearance.backgroundColor = self.appBarColor
-    appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+    appearance.titleTextAttributes = [.foregroundColor: self.appBarTitleColor]
+    
+    // Remove button background
+    appearance.buttonAppearance.normal.titleTextAttributes = [.foregroundColor: self.backArrowColor]
     
     navController.navigationBar.standardAppearance = appearance
     navController.navigationBar.scrollEdgeAppearance = appearance
     navController.navigationBar.compactAppearance = appearance
+    navController.navigationBar.tintColor = self.backArrowColor
     
     // Set navigation bar visibility
     navController.setNavigationBarHidden(!self.appBarVisible, animated: false)
@@ -333,24 +461,22 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
           let appearance = UINavigationBarAppearance()
           appearance.configureWithOpaqueBackground()
           appearance.backgroundColor = self.appBarColor
-          appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+          appearance.titleTextAttributes = [.foregroundColor: self.appBarTitleColor]
+          
+          // Remove button background
+          appearance.buttonAppearance.normal.titleTextAttributes = [.foregroundColor: self.backArrowColor]
           
           navController.navigationBar.standardAppearance = appearance
           navController.navigationBar.scrollEdgeAppearance = appearance
           navController.navigationBar.compactAppearance = appearance
+          navController.navigationBar.tintColor = self.backArrowColor
           
           // Update title
           topVC.navigationItem.title = self.appBarTitle
           
           // Update back button
           if self.showBackButton {
-            let backButton = UIBarButtonItem(
-              image: UIImage(systemName: "chevron.left"),
-              style: .plain,
-              target: self,
-              action: #selector(self.dismissChat)
-            )
-            topVC.navigationItem.leftBarButtonItem = backButton
+            topVC.navigationItem.leftBarButtonItem = self.createBackButton()
           } else {
             topVC.navigationItem.leftBarButtonItem = nil
           }

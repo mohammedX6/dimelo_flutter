@@ -43,10 +43,12 @@ class DimeloFlutterPlugin :
     private var userEmail: String? = null
     private var userPhone: String? = null
     private var authInfo: HashMap<String, Any> = HashMap()
-    
+
     // App bar customization properties
-    private var appBarTitle: String = "Dimelo Chat"
+    private var appBarTitle: String = "ssssssDimelo Chat"
     private var appBarColor: Int = Color.BLUE
+    private var appBarTitleColor: Int = Color.BLACK
+    private var backArrowColor: Int = Color.BLACK     // Added back arrow color property
     private var showBackButton: Boolean = true
     private var appBarVisible: Boolean = true
 
@@ -99,19 +101,25 @@ class DimeloFlutterPlugin :
                     result.success(false)
                     return
                 }
+                println("Showing Dimelo Messenger")
 
                 Handler(Looper.getMainLooper()).post {
                     activity?.let { act ->
                         // Use our custom chat activity that handles back button properly
                         val intent = android.content.Intent(act, CustomChatActivity::class.java)
                         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        
+
                         // Pass app bar configuration to the chat activity
                         intent.putExtra("appBarTitle", appBarTitle)
                         intent.putExtra("appBarColor", appBarColor)
+                        intent.putExtra("appBarTitleColor", appBarTitleColor)
+                        intent.putExtra("backArrowColor", backArrowColor)      // Pass back arrow color
                         intent.putExtra("appBarVisible", appBarVisible)
                         intent.putExtra("showBackButton", showBackButton)
                         
+                        // Debug logging
+                        android.util.Log.d("DimeloFlutterPlugin", "Passing to CustomChatActivity - Title: $appBarTitle, TitleColor: ${String.format("#%06X", 0xFFFFFF and appBarTitleColor)}, BackArrowColor: ${String.format("#%06X", 0xFFFFFF and backArrowColor)}")
+
                         act.startActivity(intent)
                         result.success(true)
                     } ?: run {
@@ -207,7 +215,7 @@ class DimeloFlutterPlugin :
             }
             "setAppBarTitle" -> {
                 val title: String? = call.argument("title")
-                title?.let { 
+                title?.let {
                     appBarTitle = it
                     updateAppBar()
                 }
@@ -215,7 +223,7 @@ class DimeloFlutterPlugin :
             }
             "setAppBarColor" -> {
                 val color: String? = call.argument("color")
-                color?.let { 
+                color?.let {
                     try {
                         appBarColor = Color.parseColor(it)
                         updateAppBar()
@@ -226,9 +234,42 @@ class DimeloFlutterPlugin :
                 }
                 result.success(true)
             }
+            "setAppBarTitleColor" -> {
+                val color: String? = call.argument("color")
+                color?.let {
+                    try {
+                        appBarTitleColor = Color.parseColor(it)
+                        updateAppBar()
+                        activity?.let { act ->
+                            if (act is CustomChatActivity) {
+                                act.updateTitleColor(appBarTitleColor)
+                            }
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        result.success(false)
+                        return
+                    }
+                }
+                result.success(true)
+            }
+            "setBackArrowColor" -> {  // New method to set back arrow color
+                val color: String? = call.argument("color")
+                color?.let {
+                    try {
+                        backArrowColor = Color.parseColor(it)
+                        android.util.Log.d("DimeloFlutterPlugin", "Set back arrow color to: $it (parsed: ${String.format("#%06X", 0xFFFFFF and backArrowColor)})")
+                        updateAppBar()
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.e("DimeloFlutterPlugin", "Invalid color format: $it", e)
+                        result.success(false)
+                        return
+                    }
+                }
+                result.success(true)
+            }
             "setAppBarVisibility" -> {
                 val visible: Boolean? = call.argument("visible")
-                visible?.let { 
+                visible?.let {
                     appBarVisible = it
                     updateAppBar()
                 }
@@ -236,7 +277,7 @@ class DimeloFlutterPlugin :
             }
             "setBackButtonVisibility" -> {
                 val visible: Boolean? = call.argument("visible")
-                visible?.let { 
+                visible?.let {
                     showBackButton = it
                     updateAppBar()
                 }
@@ -246,6 +287,7 @@ class DimeloFlutterPlugin :
                 val config = mapOf(
                     "title" to appBarTitle,
                     "color" to String.format("#%06X", 0xFFFFFF and appBarColor),
+                    "titleColor" to String.format("#%06X", 0xFFFFFF and appBarTitleColor),
                     "visible" to appBarVisible,
                     "showBackButton" to showBackButton
                 )
@@ -275,7 +317,7 @@ class DimeloFlutterPlugin :
     override fun onDetachedFromActivity() {
         activity = null
     }
-    
+
     /**
      * Setup back button handling for the activity
      * This ensures the back button works properly in the chat activity
@@ -286,7 +328,7 @@ class DimeloFlutterPlugin :
             activity.supportActionBar?.let { actionBar ->
                 actionBar.setDisplayHomeAsUpEnabled(showBackButton)
                 actionBar.setDisplayShowHomeEnabled(showBackButton)
-                
+
                 if (showBackButton) {
                     // Set a proper back arrow icon
                     actionBar.setHomeAsUpIndicator(android.R.drawable.ic_menu_revert)
@@ -322,14 +364,16 @@ class DimeloFlutterPlugin :
                         actionBar.setBackgroundDrawable(
                             android.graphics.drawable.ColorDrawable(appBarColor)
                         )
+                        
+
                         actionBar.setDisplayHomeAsUpEnabled(showBackButton)
                         actionBar.setDisplayShowHomeEnabled(showBackButton)
-                        
+
                         // Set up back button click listener
                         if (showBackButton) {
                             actionBar.setHomeAsUpIndicator(android.R.drawable.ic_menu_revert)
                         }
-                        
+
                         if (appBarVisible) {
                             actionBar.show()
                         } else {
@@ -345,7 +389,7 @@ class DimeloFlutterPlugin :
                         )
                         actionBar.setDisplayHomeAsUpEnabled(showBackButton)
                         actionBar.setDisplayShowHomeEnabled(showBackButton)
-                        
+
                         if (appBarVisible) {
                             actionBar.show()
                         } else {
