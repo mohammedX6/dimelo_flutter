@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.Toolbar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar as AppCompatToolbar
-import com.dimelo.dimelosdk.main.Dimelo
 import org.json.JSONObject
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -19,6 +18,9 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import android.view.MenuItem
+
+import com.dimelo.dimelosdk.main.Dimelo
+import com.dimelo.dimelosdk.main.DimeloConnection
 
 /** DimeloFlutterPlugin */
 class DimeloFlutterPlugin :
@@ -185,12 +187,23 @@ class DimeloFlutterPlugin :
             }
             "getUnreadCount" -> {
                 if (Dimelo.isInstantiated()) {
-                    val count = Dimelo.getInstance().unreadCount
-                    result.success(count)
+                    Dimelo.getInstance().fetchUnreadCount(object : Dimelo.UnreadCountCallback {
+                        override fun onSuccess(unreadCount: Int) {
+                            println("Dimelo unread count: $unreadCount")
+                            result.success(unreadCount)
+                        }
+
+                        override fun onError(error: DimeloConnection.DimeloError?) {
+                            println("Error fetching unread count: code=${error}, message=${error}")
+                            result.success(0)
+                        }
+                    })
                 } else {
+                    println("Dimelo is not instantiated; unread count is 0")
                     result.success(0)
                 }
             }
+
             "setDeviceToken" -> {
                 val token: String? = call.argument("token")
                 if (Dimelo.isInstantiated() && !token.isNullOrBlank()) {
