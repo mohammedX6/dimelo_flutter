@@ -189,6 +189,7 @@ class CustomChatActivity : ChatActivity() {
             android.R.id.home -> {
                 // Handle back button press
                 if (showBackButton) {
+                    notifyPluginChatClosed()
                     finish()
                     true
                 } else {
@@ -205,9 +206,27 @@ class CustomChatActivity : ChatActivity() {
      */
     override fun onBackPressed() {
         if (showBackButton) {
+            println("CustomChatActivity: onBackPressed - finishing activity")
+            notifyPluginChatClosed()
             finish()
         } else {
             super.onBackPressed()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        notifyPluginChatClosed()
+    }
+
+    /**
+     * Notify the Flutter plugin that the chat activity is being closed
+     */
+    private fun notifyPluginChatClosed() {
+        try {
+            DimeloFlutterPlugin.getInstance()?.notifyChatClosed()
+        } catch (e: Exception) {
+            android.util.Log.e("CustomChatActivity", "Failed to notify plugin about chat close", e)
         }
     }
 }

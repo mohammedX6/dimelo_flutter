@@ -17,6 +17,9 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.EventChannel.EventSink
+import io.flutter.plugin.common.EventChannel.StreamHandler
 import android.view.MenuItem
 
 import com.dimelo.dimelosdk.main.Dimelo
@@ -26,14 +29,22 @@ import com.dimelo.dimelosdk.main.DimeloConnection
 class DimeloFlutterPlugin :
     FlutterPlugin,
     MethodCallHandler,
-    ActivityAware {
+    ActivityAware,
+    StreamHandler {
     // The MethodChannel that will the communication between Flutter and native Android
     //
     // This local reference serves to register the plugin with the Flutter Engine and unregister it
     // when the Flutter Engine is detached from the Activity
     private lateinit var channel: MethodChannel
+    private lateinit var eventChannel: EventChannel
+    private var eventSink: EventSink? = null
     private var activity: Activity? = null
     private lateinit var appContext: Context
+    
+    // Unread count monitoring
+    private var lastUnreadCount: Int = 0
+    private var unreadCountTimer: java.util.Timer? = null
+    private var currentUserId: String? = null
 
     private var initialized: Boolean = false
     private var apiKey: String? = null
@@ -57,7 +68,10 @@ class DimeloFlutterPlugin :
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "dimelo_flutter")
         channel.setMethodCallHandler(this)
+        eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "dimelo_flutter_events")
+        eventChannel.setStreamHandler(this)
         appContext = flutterPluginBinding.applicationContext
+        setInstance(this)
     }
 
     override fun onMethodCall(
@@ -84,7 +98,7 @@ class DimeloFlutterPlugin :
                     // Ensure SDK is setup with a non-null context
                     Dimelo.setup(appContext)
                     val dimelo = Dimelo.getInstance()
-                    // Third parameter is a DimeloListener, pass null and set user separately
+                    // Initialize Dimelo SDK without listener (will implement custom event handling)
                     dimelo.initWithApiSecret(secretToUse, domain, null)
                     userId?.let { dimelo.userIdentifier = it }
                     initialized = true
@@ -123,6 +137,8 @@ class DimeloFlutterPlugin :
                         android.util.Log.d("DimeloFlutterPlugin", "Passing to CustomChatActivity - Title: $appBarTitle, TitleColor: ${String.format("#%06X", 0xFFFFFF and appBarTitleColor)}, BackArrowColor: ${String.format("#%06X", 0xFFFFFF and backArrowColor)}")
 
                         act.startActivity(intent)
+                        // Notify Flutter that chat was opened
+                        notifyChatOpened()
                         result.success(true)
                     } ?: run {
                         result.success(false)
@@ -135,6 +151,10 @@ class DimeloFlutterPlugin :
                 userName = call.argument("name")
                 userEmail = call.argument("email")
                 userPhone = call.argument("phone")
+                
+                // Update current user ID for unread count tracking
+                currentUserId = userId
+                
                 if (Dimelo.isInstantiated()) {
                     val dimelo = Dimelo.getInstance()
                     userId?.let { dimelo.userIdentifier = it }
@@ -179,7 +199,10 @@ class DimeloFlutterPlugin :
                 userName = null
                 userEmail = null
                 userPhone = null
+                currentUserId = null
                 authInfo.clear()
+                // Reset unread count when user logs out
+                lastUnreadCount = 0
                 result.success(true)
             }
             "isAvailable" -> {
@@ -190,6 +213,15 @@ class DimeloFlutterPlugin :
                     Dimelo.getInstance().fetchUnreadCount(object : Dimelo.UnreadCountCallback {
                         override fun onSuccess(unreadCount: Int) {
                             println("Dimelo unread count: $unreadCount")
+                            // Also trigger event if count changed
+                            if (unreadCount != lastUnreadCount) {
+                                lastUnreadCount = unreadCount
+                                sendEventToFlutter("onUnreadCountChanged", mapOf(
+                                    "unreadCount" to unreadCount,
+                                    "userId" to (currentUserId ?: ""),
+                                    "userName" to (userName ?: "")
+                                ))
+                            }
                             result.success(unreadCount)
                         }
 
@@ -306,12 +338,23 @@ class DimeloFlutterPlugin :
                 )
                 result.success(config)
             }
+            "getCurrentUser" -> {
+                val userInfo = mapOf(
+                    "userId" to (currentUserId ?: ""),
+                    "userName" to (userName ?: ""),
+                    "userEmail" to (userEmail ?: ""),
+                    "userPhone" to (userPhone ?: "")
+                )
+                result.success(userInfo)
+            }
             else -> result.notImplemented()
         }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        eventChannel.setStreamHandler(null)
+        stopUnreadCountMonitoring()
     }
 
     // ActivityAware implementation to access current Activity for presenting UI
@@ -357,6 +400,7 @@ class DimeloFlutterPlugin :
     fun handleBackButtonPress(activity: Activity): Boolean {
         if (showBackButton) {
             // Finish the current activity to go back
+            println("Back button pressed, finishing activity")
             activity.finish()
             return true
         }
@@ -411,6 +455,121 @@ class DimeloFlutterPlugin :
                     }
                 }
             }
+        }
+    }
+
+    // StreamHandler implementation for EventChannel
+    override fun onListen(arguments: Any?, events: EventSink?) {
+        eventSink = events
+    }
+
+    override fun onCancel(arguments: Any?) {
+        eventSink = null
+    }
+
+    /**
+     * Send event to Flutter via event channel
+     */
+    private fun sendEventToFlutter(eventType: String, data: Map<String, Any> = emptyMap()) {
+        Handler(Looper.getMainLooper()).post {
+            val eventData = mutableMapOf<String, Any>(
+                "event" to eventType,
+                "timestamp" to System.currentTimeMillis()
+            )
+            eventData.putAll(data)
+            eventSink?.success(eventData)
+        }
+    }
+
+    /**
+     * Notify Flutter about chat close event
+     * This method can be called from CustomChatActivity when it's closed
+     */
+    fun notifyChatClosed() {
+        sendEventToFlutter("onChatActivityClosed")
+        println("Dimelo chat activity closed")
+        // Stop monitoring unread count when chat is closed
+        stopUnreadCountMonitoring()
+    }
+
+    /**
+     * Notify Flutter about chat open event
+     * This method can be called when chat is opened
+     */
+    fun notifyChatOpened() {
+        sendEventToFlutter("onChatActivityOpened")
+        println("Dimelo chat activity opened")
+        // Start monitoring unread count when chat is opened
+        startUnreadCountMonitoring()
+    }
+
+    /**
+     * Start monitoring unread message count
+     */
+    private fun startUnreadCountMonitoring() {
+        stopUnreadCountMonitoring() // Stop any existing timer
+        
+        if (!initialized || !Dimelo.isInstantiated()) {
+            return
+        }
+
+        unreadCountTimer = java.util.Timer()
+        unreadCountTimer?.scheduleAtFixedRate(object : java.util.TimerTask() {
+            override fun run() {
+                checkUnreadCount()
+            }
+        }, 0, 5000) // Check every 5 seconds
+    }
+
+    /**
+     * Stop monitoring unread message count
+     */
+    private fun stopUnreadCountMonitoring() {
+        unreadCountTimer?.cancel()
+        unreadCountTimer = null
+    }
+
+    /**
+     * Check current unread count and notify if changed
+     */
+    private fun checkUnreadCount() {
+        if (!initialized || !Dimelo.isInstantiated()) {
+            return
+        }
+
+        try {
+            Dimelo.getInstance().fetchUnreadCount(object : Dimelo.UnreadCountCallback {
+                override fun onSuccess(unreadCount: Int) {
+                    if (unreadCount != lastUnreadCount) {
+                        lastUnreadCount = unreadCount
+                        sendEventToFlutter("onUnreadCountChanged", mapOf(
+                            "unreadCount" to unreadCount,
+                            "userId" to (currentUserId ?: ""),
+                            "userName" to (userName ?: "")
+                        ))
+                        println("Dimelo unread count changed: $unreadCount for user: $currentUserId")
+                    }
+                }
+
+                override fun onError(error: DimeloConnection.DimeloError?) {
+                    println("Error checking unread count: $error")
+                }
+            })
+        } catch (e: Exception) {
+            println("Exception checking unread count: ${e.message}")
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        private var instance: DimeloFlutterPlugin? = null
+
+        @JvmStatic
+        fun getInstance(): DimeloFlutterPlugin? = instance
+
+        @JvmStatic
+        fun setInstance(plugin: DimeloFlutterPlugin) {
+            instance = plugin
         }
     }
 }

@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 import Dimelo
 
-public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
+public class DimeloFlutterPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
   private var initialized: Bool = false
   private var apiKey: String?
   private var applicationSecret: String?
@@ -25,11 +25,21 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
   
   // Reference to the chat view controller for updating title
   private weak var currentChatViewController: UIViewController?
+  
+  // Event channel for streaming events to Flutter
+  private var eventSink: FlutterEventSink?
+  
+  // Unread count monitoring
+  private var lastUnreadCount: Int = 0
+  private var unreadCountTimer: Timer?
+  private var currentUserId: String?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "dimelo_flutter", binaryMessenger: registrar.messenger())
+    let eventChannel = FlutterEventChannel(name: "dimelo_flutter_events", binaryMessenger: registrar.messenger())
     let instance = DimeloFlutterPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
+    eventChannel.setStreamHandler(instance)
   }
 
   // Converts a hexadecimal string (e.g., "<a1b2c3...>" or "a1b2c3...") to Data
@@ -71,6 +81,12 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
 
   @objc func dismissChat() {
     DispatchQueue.main.async { [weak self] in
+      // Send onChatActivityClosed event to Flutter
+      self?.sendEvent(["event": "onChatActivityClosed", "timestamp": Int64(Date().timeIntervalSince1970 * 1000)])
+      
+      // Stop monitoring unread count when chat is closed
+      self?.stopUnreadCountMonitoring()
+      
       // Dismiss the chat view controller
       if let chatVC = self?.currentChatViewController {
         chatVC.dismiss(animated: true, completion: nil)
@@ -170,6 +186,12 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
           }
           
           if let top = self.topViewController() {
+            // Send onChatActivityOpened event to Flutter
+            self.sendEvent(["event": "onChatActivityOpened", "timestamp": Int64(Date().timeIntervalSince1970 * 1000)])
+            
+            // Start monitoring unread count when chat is opened
+            self.startUnreadCountMonitoring()
+            
             // Present the chat view controller full screen
             top.present(chatVC, animated: true) {
               // Set the title and back button again after presentation to ensure they stick
@@ -218,6 +240,10 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
       self.userName = args?["name"] as? String
       self.userEmail = args?["email"] as? String
       self.userPhone = args?["phone"] as? String
+      
+      // Update current user ID for unread count tracking
+      self.currentUserId = self.userId
+      
       if let dimelo = Dimelo.sharedInstance() {
         if let id = self.userId { dimelo.userIdentifier = id }
         if let name = self.userName { dimelo.userName = name }
@@ -248,17 +274,32 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
       self.userName = nil
       self.userEmail = nil
       self.userPhone = nil
+      self.currentUserId = nil
       self.authInfo.removeAll()
+      // Reset unread count when user logs out
+      self.lastUnreadCount = 0
       result(true)
     case "isAvailable":
       result(self.initialized)
     case "getUnreadCount":
       if let dimelo = Dimelo.sharedInstance() {
-        dimelo.fetchUnreadCount { count, error in
+        dimelo.fetchUnreadCount { [weak self] count, error in
           if let _ = error {
             result(0)
           } else {
-            result(Int(count))
+            let unreadCount = Int(count)
+            // Also trigger event if count changed
+            if let self = self, unreadCount != self.lastUnreadCount {
+              self.lastUnreadCount = unreadCount
+              self.sendEvent([
+                "event": "onUnreadCountChanged",
+                "unreadCount": unreadCount,
+                "userId": self.currentUserId ?? "",
+                "userName": self.userName ?? "",
+                "timestamp": Int64(Date().timeIntervalSince1970 * 1000)
+              ])
+            }
+            result(unreadCount)
           }
         }
       } else {
@@ -378,6 +419,14 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
       } else {
         result(false)
       }
+    case "getCurrentUser":
+      let userInfo: [String: Any] = [
+        "userId": self.currentUserId ?? "",
+        "userName": self.userName ?? "",
+        "userEmail": self.userEmail ?? "",
+        "userPhone": self.userPhone ?? ""
+      ]
+      result(userInfo)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -484,6 +533,78 @@ public class DimeloFlutterPlugin: NSObject, FlutterPlugin {
           // Update navigation bar visibility
           navController.setNavigationBarHidden(!self.appBarVisible, animated: true)
         }
+      }
+    }
+  }
+  
+  // MARK: - FlutterStreamHandler
+  
+  public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+    self.eventSink = events
+    return nil
+  }
+  
+  public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    self.eventSink = nil
+    stopUnreadCountMonitoring()
+    return nil
+  }
+  
+  // MARK: - Event Helper Methods
+  
+  /// Send event to Flutter via event channel
+  private func sendEvent(_ event: [String: Any]) {
+    DispatchQueue.main.async { [weak self] in
+      self?.eventSink?(event)
+    }
+  }
+  
+  // MARK: - Unread Count Monitoring
+  
+  /// Start monitoring unread message count
+  private func startUnreadCountMonitoring() {
+    stopUnreadCountMonitoring() // Stop any existing timer
+    
+    guard self.initialized, let dimelo = Dimelo.sharedInstance() else {
+      return
+    }
+    
+    unreadCountTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+      self?.checkUnreadCount()
+    }
+  }
+  
+  /// Stop monitoring unread message count
+  private func stopUnreadCountMonitoring() {
+    unreadCountTimer?.invalidate()
+    unreadCountTimer = nil
+  }
+  
+  /// Check current unread count and notify if changed
+  private func checkUnreadCount() {
+    guard self.initialized, let dimelo = Dimelo.sharedInstance() else {
+      return
+    }
+    
+    dimelo.fetchUnreadCount { [weak self] count, error in
+      guard let self = self else { return }
+      
+      if let error = error {
+        print("Error checking unread count: \(error)")
+        return
+      }
+      
+      let unreadCount = Int(count)
+      if unreadCount != self.lastUnreadCount {
+        self.lastUnreadCount = unreadCount
+        self.sendEvent([
+          "event": "onUnreadCountChanged",
+          "unreadCount": unreadCount,
+          "userId": self.currentUserId ?? "",
+          "userName": self.userName ?? "",
+          "timestamp": Int64(Date().timeIntervalSince1970 * 1000)
+        ])
+        print("Dimelo unread count changed: \(unreadCount) for user: \(self.currentUserId ?? "unknown")")
       }
     }
   }

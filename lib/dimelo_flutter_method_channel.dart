@@ -14,9 +14,19 @@ class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
   /// the native Dimelo SDK implementations.
   static const MethodChannel _methodChannel = MethodChannel('dimelo_flutter');
 
+  /// The event channel used to receive events from the native platform.
+  ///
+  /// This channel is used to receive events like onClose, onOpen, etc.
+  /// from the native Dimelo SDK implementations.
+  static const EventChannel _eventChannel = EventChannel('dimelo_flutter_events');
+
   /// Getter for the method channel.
   @visibleForTesting
   MethodChannel get methodChannel => _methodChannel;
+
+  /// Getter for the event channel.
+  @visibleForTesting
+  EventChannel get eventChannel => _eventChannel;
 
   @override
   Future<String?> getPlatformVersion() async {
@@ -259,6 +269,27 @@ class MethodChannelDimeloFlutter extends DimeloFlutterPlatform {
     } on PlatformException catch (e) {
       debugPrint('Failed to set full screen presentation: ${e.message}');
       return false;
+    }
+  }
+
+  @override
+  Stream<Map<String, dynamic>> get eventStream {
+    return _eventChannel.receiveBroadcastStream().map((dynamic event) {
+      if (event is Map) {
+        return Map<String, dynamic>.from(event);
+      }
+      return <String, dynamic>{};
+    });
+  }
+
+  @override
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    try {
+      final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('getCurrentUser');
+      return Map<String, dynamic>.from(result ?? {});
+    } on PlatformException catch (e) {
+      debugPrint('Failed to get current user: ${e.message}');
+      return {};
     }
   }
 }

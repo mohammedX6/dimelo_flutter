@@ -202,4 +202,68 @@ class DimeloFlutter {
   ///
   /// Returns `true` if the presentation style was set successfully, `false` otherwise.
   Future<bool> setFullScreenPresentation({required bool fullScreen}) => DimeloFlutterPlatform.instance.setFullScreenPresentation(fullScreen: fullScreen);
+
+  /// Get a stream of Dimelo events.
+  ///
+  /// This method returns a stream that emits events from the Dimelo chat interface,
+  /// including:
+  /// - `onChatActivityClosed`: When the chat interface is closed by the user
+  /// - `onChatActivityOpened`: When the chat interface is opened
+  /// - `onUnreadCountChanged`: When the unread message count changes
+  ///
+  /// Each event is a Map containing:
+  /// - `event`: The event type (String)
+  /// - `timestamp`: The event timestamp in milliseconds (int)
+  /// - Additional event-specific data:
+  ///   - For `onUnreadCountChanged`: `unreadCount`, `userId`, `userName`
+  ///
+  /// Example usage:
+  /// ```dart
+  /// DimeloFlutter().eventStream.listen((event) {
+  ///   switch (event['event']) {
+  ///     case 'onChatActivityClosed':
+  ///       print('Chat closed at ${event['timestamp']}');
+  ///       // Perfect time to show feedback dialog or perform post-chat actions
+  ///       showFeedbackDialog();
+  ///       break;
+  ///     case 'onChatActivityOpened':
+  ///       print('Chat opened at ${event['timestamp']}');
+  ///       // Track analytics or update UI state
+  ///       break;
+  ///     case 'onUnreadCountChanged':
+  ///       int unreadCount = event['unreadCount'] ?? 0;
+  ///       String userId = event['userId'] ?? '';
+  ///       String userName = event['userName'] ?? '';
+  ///       print('Unread messages: $unreadCount for user $userName ($userId)');
+  ///       // Update UI badge or notification for specific user
+  ///       updateUnreadBadge(unreadCount, userId);
+  ///       break;
+  ///   }
+  /// });
+  /// ```
+  ///
+  /// Returns a stream of maps containing event data.
+  Stream<Map<String, dynamic>> get eventStream => DimeloFlutterPlatform.instance.eventStream;
+
+  /// Get the current user information.
+  ///
+  /// This method returns information about the currently logged in user.
+  /// Useful for identifying which user the unread messages belong to.
+  ///
+  /// Returns a map containing:
+  /// - `userId`: The user's unique identifier
+  /// - `userName`: The user's display name
+  /// - `userEmail`: The user's email address
+  /// - `userPhone`: The user's phone number
+  ///
+  /// Example usage:
+  /// ```dart
+  /// final userInfo = await DimeloFlutter().getCurrentUser();
+  /// String userId = userInfo['userId'] ?? '';
+  /// String userName = userInfo['userName'] ?? '';
+  /// print('Current user: $userName ($userId)');
+  /// ```
+  ///
+  /// Returns a map containing the current user information.
+  Future<Map<String, dynamic>> getCurrentUser() => DimeloFlutterPlatform.instance.getCurrentUser();
 }

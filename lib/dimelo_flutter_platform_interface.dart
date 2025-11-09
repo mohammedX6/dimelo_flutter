@@ -249,4 +249,24 @@ abstract class DimeloFlutterPlatform extends PlatformInterface {
   Future<bool> setFullScreenPresentation({required bool fullScreen}) {
     throw UnimplementedError('setFullScreenPresentation() has not been implemented.');
   }
+
+  /// Get a stream of Dimelo events.
+  ///
+  /// This method returns a stream that emits events from the Dimelo SDK,
+  /// including onClose, onOpen, onMessage, and onUnreadCountChanged events.
+  ///
+  /// Returns a stream of maps containing event data.
+  Stream<Map<String, dynamic>> get eventStream {
+    throw UnimplementedError('eventStream has not been implemented.');
+  }
+
+  /// Get the current user information.
+  ///
+  /// This method returns information about the currently logged in user,
+  /// including userId, userName, userEmail, and userPhone.
+  ///
+  /// Returns a map containing the current user information.
+  Future<Map<String, dynamic>> getCurrentUser() {
+    throw UnimplementedError('getCurrentUser() has not been implemented.');
+  }
 }
